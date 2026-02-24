@@ -32,7 +32,7 @@ export default function Auth() {
         });
         if (error) throw error;
         toast.success('Welcome back!');
-        navigate('/');
+        navigate('/dashboard');
       } else {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: formData.email,
@@ -61,13 +61,18 @@ export default function Auth() {
             member_type: 'general'
           });
           
-          if (profileError) throw profileError;
+          if (profileError) {
+            console.error("Profile creation error:", profileError);
+            throw new Error("Account created but profile setup failed. Please contact admin.");
+          }
+          
           toast.success('Registration successful! Please wait for admin approval.');
           setIsLogin(true);
         }
       }
     } catch (error: any) {
-      toast.error(error.message);
+      console.error("Auth error:", error);
+      toast.error(error.message || "An unexpected error occurred");
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Profile } from '../types';
+import { toast } from 'react-hot-toast';
 
 interface AuthContextType {
   user: any | null;
@@ -84,9 +85,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const terminateSession = async () => {
     try {
-      await supabase.auth.signOut();
-    } catch (err) {
+      setIsInitializing(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setCurrentUser(null);
+      setUserProfile(null);
+      toast.success('Signed out successfully');
+    } catch (err: any) {
       console.error("Logout operation failed:", err);
+      toast.error(err.message || "Failed to sign out");
+    } finally {
+      setIsInitializing(false);
     }
   };
 
