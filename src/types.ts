@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'moderator' | 'member';
+export type UserRole = 'admin' | 'moderator' | 'member' | 'treasurer' | 'social_manager';
 
 export interface Profile {
   id: string;
@@ -13,6 +13,16 @@ export interface Profile {
   avatar_url?: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
+}
+
+export interface Transaction {
+  id: string;
+  type: 'income' | 'expense';
+  category: 'member_fee' | 'event' | 'expense' | 'other';
+  amount: number;
+  description: string;
+  created_at: string;
+  created_by: string;
 }
 
 export interface Post {

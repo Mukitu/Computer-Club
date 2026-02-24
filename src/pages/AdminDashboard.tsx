@@ -3,23 +3,42 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, Newspaper, CreditCard, Settings, 
   CheckCircle2, XCircle, Trash2, Edit, Plus,
-  LayoutDashboard, TrendingUp, UserCheck, Clock
+  LayoutDashboard, TrendingUp, UserCheck, Clock,
+  DollarSign, ArrowUpCircle, ArrowDownCircle, Search
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Profile, Post, Payment, ClubSettings } from '../types';
+import { Profile, Post, Payment, ClubSettings, Transaction } from '../types';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'posts' | 'payments' | 'settings'>('overview');
-  const [stats, setStats] = useState({ members: 0, pending: 0, posts: 0, revenue: 0 });
+  const { profile: currentUser } = useAuth();
+  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'posts' | 'payments' | 'transactions' | 'settings'>('overview');
+  const [stats, setStats] = useState({ members: 0, pending: 0, posts: 0, revenue: 0, expenses: 0 });
   const [loading, setLoading] = useState(true);
 
   // Data states
   const [members, setMembers] = useState<Profile[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [payments, setPayments] = useState<(Payment & { profiles: Profile })[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<ClubSettings | null>(null);
+
+  // Transaction Form State
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [transactionForm, setTransactionForm] = useState({
+    type: 'income' as 'income' | 'expense',
+    category: 'other' as any,
+    amount: 0,
+    description: ''
+  });
+
+  useEffect(() => {
+    // Role-based default tab
+    if (currentUser?.role === 'treasurer') setActiveTab('transactions');
+    else if (currentUser?.role === 'social_manager') setActiveTab('posts');
+  }, [currentUser]);
 
   useEffect(() => {
     fetchStats();
@@ -31,30 +50,83 @@ export default function AdminDashboard() {
     const { count: pending } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending');
     const { count: posts } = await supabase.from('posts').select('*', { count: 'exact', head: true });
     
-    // Revenue calc (verified payments)
     const { data: payments } = await supabase.from('payments').select('amount').eq('status', 'verified');
-    const revenue = payments?.reduce((acc, curr) => acc + curr.amount, 0) || 0;
+    const feeRevenue = payments?.reduce((acc, curr) => acc + curr.amount, 0) || 0;
 
-    setStats({ members: members || 0, pending: pending || 0, posts: posts || 0, revenue });
+    const { data: trans } = await supabase.from('transactions').select('*');
+    const eventRevenue = trans?.filter(t => t.type === 'income').reduce((acc, curr) => acc + curr.amount, 0) || 0;
+    const expenses = trans?.filter(t => t.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0) || 0;
+
+    setStats({ 
+      members: members || 0, 
+      pending: pending || 0, 
+      posts: posts || 0, 
+      revenue: feeRevenue + eventRevenue,
+      expenses
+    });
   };
 
   const fetchData = async () => {
     setLoading(true);
-    if (activeTab === 'members') {
-      const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-      setMembers(data || []);
-    } else if (activeTab === 'posts') {
-      const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
-      setPosts(data || []);
-    } else if (activeTab === 'payments') {
-      const { data } = await supabase.from('payments').select('*, profiles(*)').order('created_at', { ascending: false });
-      setPayments(data as any || []);
-    } else if (activeTab === 'settings') {
-      const { data } = await supabase.from('settings').select('*').single();
-      setSettings(data);
+    try {
+      if (activeTab === 'members') {
+        const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+        setMembers(data || []);
+      } else if (activeTab === 'posts') {
+        const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+        setPosts(data || []);
+      } else if (activeTab === 'payments') {
+        const { data } = await supabase.from('payments').select('*, profiles(*)').order('created_at', { ascending: false });
+        setPayments(data as any || []);
+      } else if (activeTab === 'transactions') {
+        const { data } = await supabase.from('transactions').select('*').order('created_at', { ascending: false });
+        setTransactions(data || []);
+      } else if (activeTab === 'settings') {
+        const { data } = await supabase.from('settings').select('*').single();
+        setSettings(data);
+      }
+    } catch (err) {
+      console.error("Data fetch error:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
+
+  const handleAddTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { error } = await supabase.from('transactions').insert({
+      ...transactionForm,
+      created_by: currentUser?.id
+    });
+
+    if (error) toast.error(error.message);
+    else {
+      toast.success('Transaction recorded');
+      setShowTransactionModal(false);
+      fetchData();
+      fetchStats();
+    }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    if (!confirm('Are you sure?')) return;
+    const { error } = await supabase.from('transactions').delete().eq('id', id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success('Transaction deleted');
+      fetchData();
+      fetchStats();
+    }
+  };
+
+  const tabs = [
+    { id: 'overview', icon: LayoutDashboard, label: 'Overview', roles: ['admin'] },
+    { id: 'members', icon: Users, label: 'Members', roles: ['admin'] },
+    { id: 'posts', icon: Newspaper, label: 'Posts', roles: ['admin', 'social_manager'] },
+    { id: 'payments', icon: CreditCard, label: 'Payments', roles: ['admin', 'treasurer'] },
+    { id: 'transactions', icon: DollarSign, label: 'Finance', roles: ['admin', 'treasurer'] },
+    { id: 'settings', icon: Settings, label: 'Settings', roles: ['admin'] }
+  ].filter(tab => tab.roles.includes(currentUser?.role || ''));
 
   const handleMemberStatus = async (id: string, status: 'approved' | 'rejected') => {
     const { error } = await supabase.from('profiles').update({ status }).eq('id', id);
@@ -231,29 +303,23 @@ export default function AdminDashboard() {
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
         <div>
-          <h1 className="text-4xl font-display font-bold text-primary mb-2">Admin Dashboard</h1>
-          <p className="text-slate-500">Manage your club operations and members.</p>
+          <h1 className="text-5xl font-display font-black text-slate-900 mb-2 tracking-tighter">Management Portal</h1>
+          <p className="text-slate-500 font-medium capitalize">Access Level: {currentUser?.role?.replace('_', ' ')}</p>
         </div>
         
-        <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
-          {[
-            { id: 'overview', icon: LayoutDashboard, label: 'Overview' },
-            { id: 'members', icon: Users, label: 'Members' },
-            { id: 'posts', icon: Newspaper, label: 'Posts' },
-            { id: 'payments', icon: CreditCard, label: 'Payments' },
-            { id: 'settings', icon: Settings, label: 'Settings' }
-          ].map((tab) => (
+        <div className="flex bg-slate-50 p-1.5 rounded-[1.5rem] border border-slate-200 shadow-inner overflow-x-auto">
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                activeTab === tab.id ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                activeTab === tab.id ? 'bg-white text-slate-900 shadow-md' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <tab.icon size={18} />
-              <span className="hidden sm:inline">{tab.label}</span>
+              <tab.icon size={16} />
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
@@ -266,46 +332,85 @@ export default function AdminDashboard() {
               <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
                 <Users size={24} />
               </div>
-              <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mb-1">Total Members</p>
-              <p className="text-4xl font-display font-bold text-primary">{stats.members}</p>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Members</p>
+              <p className="text-4xl font-display font-black text-slate-900">{stats.members}</p>
             </div>
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-6">
                 <Clock size={24} />
               </div>
-              <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mb-1">Pending Approval</p>
-              <p className="text-4xl font-display font-bold text-primary">{stats.pending}</p>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Pending Approval</p>
+              <p className="text-4xl font-display font-black text-slate-900">{stats.pending}</p>
             </div>
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-              <div className="w-12 h-12 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6">
                 <TrendingUp size={24} />
               </div>
-              <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mb-1">Total Revenue</p>
-              <p className="text-4xl font-display font-bold text-primary">৳{stats.revenue}</p>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Revenue</p>
+              <p className="text-4xl font-display font-black text-slate-900">৳{stats.revenue}</p>
             </div>
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-              <div className="w-12 h-12 bg-violet-100 text-violet-600 rounded-2xl flex items-center justify-center mb-6">
-                <Newspaper size={24} />
+              <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mb-6">
+                <ArrowDownCircle size={24} />
               </div>
-              <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mb-1">Total Posts</p>
-              <p className="text-4xl font-display font-bold text-primary">{stats.posts}</p>
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Expenses</p>
+              <p className="text-4xl font-display font-black text-slate-900">৳{stats.expenses}</p>
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-              <h3 className="text-xl font-display font-bold text-primary mb-6">Recent Activity</h3>
-              <div className="space-y-6">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-slate-100" />
-                    <div className="flex-grow">
-                      <p className="text-sm font-bold text-slate-900">New member joined</p>
-                      <p className="text-xs text-slate-500">2 hours ago</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        </div>
+      )}
+
+      {activeTab === 'transactions' && (
+        <div className="space-y-8">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-display font-black text-slate-900">Financial Records</h2>
+            <button 
+              onClick={() => setShowTransactionModal(true)}
+              className="flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-primary transition-all shadow-xl shadow-slate-900/20"
+            >
+              <Plus size={18} /> Record Transaction
+            </button>
+          </div>
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                    <th className="px-8 py-5">Date</th>
+                    <th className="px-8 py-5">Description</th>
+                    <th className="px-8 py-5">Category</th>
+                    <th className="px-8 py-5">Amount</th>
+                    <th className="px-8 py-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {transactions.map((t) => (
+                    <tr key={t.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-8 py-5 text-sm font-bold text-slate-500">
+                        {format(new Date(t.created_at), 'MMM d, yyyy')}
+                      </td>
+                      <td className="px-8 py-5">
+                        <p className="font-bold text-slate-900">{t.description}</p>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className="px-3 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                          {t.category}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <p className={`font-display font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {t.type === 'income' ? '+' : '-'}৳{t.amount}
+                        </p>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <button onClick={() => handleDeleteTransaction(t.id)} className="p-2 text-rose-400 hover:bg-rose-50 rounded-xl transition-colors">
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

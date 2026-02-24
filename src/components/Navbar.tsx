@@ -22,6 +22,7 @@ export const Navbar: React.FC = () => {
     { label: 'Leadership', href: '/leadership' },
     { label: 'Members', href: '/members' },
     { label: 'Payments', href: '/payments' },
+    ...(user ? [{ label: 'Dashboard', href: '/dashboard' }] : []),
   ];
 
   return (
@@ -67,24 +68,20 @@ export const Navbar: React.FC = () => {
                   <LayoutDashboard size={18} />
                 </Link>
               )}
-              <div className="relative group">
-                <button className="flex items-center gap-3 p-1.5 pr-4 rounded-full bg-slate-50 hover:bg-slate-100 transition-all border border-slate-100">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 p-1.5 pr-4 rounded-full bg-slate-50 border border-slate-100">
                   <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-black shadow-lg">
                     {profile?.full_name?.charAt(0) || 'U'}
                   </div>
                   <span className="text-xs font-black text-slate-700 tracking-tight">{profile?.full_name?.split(' ')[0]}</span>
-                </button>
-                <div className="absolute right-0 mt-3 w-56 bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right scale-95 group-hover:scale-100 p-2.5 z-50">
-                  <Link to="/profile" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
-                    <User size={16} /> My Profile
-                  </Link>
-                  <button 
-                    onClick={() => signOut()}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
-                  >
-                    <LogOut size={16} /> Terminate Session
-                  </button>
                 </div>
+                <button 
+                  onClick={() => signOut()}
+                  className="p-2.5 rounded-xl text-rose-500 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100"
+                  title="Sign Out"
+                >
+                  <LogOut size={20} />
+                </button>
               </div>
             </div>
           ) : (

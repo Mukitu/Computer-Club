@@ -12,7 +12,7 @@ import Members from './pages/Members';
 import Payments from './pages/Payments';
 import AdminDashboard from './pages/AdminDashboard';
 import Auth from './pages/Auth';
-import Profile from './pages/Profile';
+import Dashboard from './pages/Dashboard';
 
 const ProtectedRoute = ({ children, role }: { children: React.ReactNode, role?: string }) => {
   const { user, profile, loading } = useAuth();
@@ -50,9 +50,9 @@ function AppContent() {
             </ProtectedRoute>
           } />
           
-          <Route path="/profile" element={
+          <Route path="/dashboard" element={
             <ProtectedRoute>
-              <Profile />
+              <Dashboard />
             </ProtectedRoute>
           } />
           
@@ -61,6 +61,7 @@ function AppContent() {
               <AdminDashboard />
             </ProtectedRoute>
           } />
+          <Route path="/profile" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
       <Footer />
