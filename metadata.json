@@ -1,0 +1,8 @@
+{
+  "name": "NBIU Computer Society Club Management System",
+  "description": "A premium, production-ready management system for the Computer Society Club at North Bengal International University, featuring role-based access, automated fee management, and dynamic content feeds.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
