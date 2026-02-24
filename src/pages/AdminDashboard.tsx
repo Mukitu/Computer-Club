@@ -68,6 +68,8 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     setLoading(true);
+    const dataGuard = setTimeout(() => setLoading(false), 5000);
+
     try {
       if (activeTab === 'members') {
         const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
@@ -88,6 +90,7 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error("Data fetch error:", err);
     } finally {
+      clearTimeout(dataGuard);
       setLoading(false);
     }
   };

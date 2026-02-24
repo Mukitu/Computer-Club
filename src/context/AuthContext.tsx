@@ -58,6 +58,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isSupabaseConfigured()) return;
       
+      // If we have a session but no user in state, or if it's a sign-in event, show loading
+      if (session?.user && (!currentUser || _event === 'SIGNED_IN')) {
+        setIsInitializing(true);
+      }
+
+      // Safety timeout for state changes
+      const stateChangeGuard = setTimeout(() => {
+        setIsInitializing(false);
+      }, 4000);
+
       try {
         setCurrentUser(session?.user ?? null);
         if (session?.user) {
@@ -66,13 +76,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .select('*')
             .eq('id', session.user.id)
             .single();
-          if (!profileError) setUserProfile(profileData);
+          
+          if (!profileError) {
+            setUserProfile(profileData);
+          } else {
+            console.error("Profile fetch error during state change:", profileError);
+            setUserProfile(null);
+          }
         } else {
           setUserProfile(null);
         }
       } catch (err) {
         console.error("Authentication state transition error:", err);
       } finally {
+        clearTimeout(stateChangeGuard);
         setIsInitializing(false);
       }
     });

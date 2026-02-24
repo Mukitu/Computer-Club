@@ -33,6 +33,8 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     setLoading(true);
+    const dataGuard = setTimeout(() => setLoading(false), 5000);
+
     try {
       // 1. Member Stats
       const { count: total } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
@@ -71,6 +73,7 @@ export default function Dashboard() {
     } catch (err) {
       console.error("Dashboard data fetch error:", err);
     } finally {
+      clearTimeout(dataGuard);
       setLoading(false);
     }
   };
@@ -82,7 +85,7 @@ export default function Dashboard() {
     return 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=c0aede';
   };
 
-  if (authLoading || (loading && !profile)) {
+  if (authLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -96,14 +99,22 @@ export default function Dashboard() {
         <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-400">
           <User size={40} />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
-        <p className="text-slate-500 mb-8">Please sign in to view your dashboard.</p>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Profile Not Found</h2>
+        <p className="text-slate-500 mb-8">We couldn't find your society profile. Please ensure you have registered correctly or contact an administrator.</p>
         <button 
           onClick={() => signOut()}
           className="bg-primary text-white px-8 py-3 rounded-2xl font-bold hover:bg-slate-800 transition-all flex items-center gap-2 mx-auto"
         >
-          <LogOut size={18} /> Sign In
+          <LogOut size={18} /> Sign Out
         </button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

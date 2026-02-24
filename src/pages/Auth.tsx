@@ -23,6 +23,7 @@ export default function Auth() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const authGuard = setTimeout(() => setLoading(false), 10000); // 10s timeout for auth
 
     try {
       if (isLogin) {
@@ -74,6 +75,7 @@ export default function Auth() {
       console.error("Auth error:", error);
       toast.error(error.message || "An unexpected error occurred");
     } finally {
+      clearTimeout(authGuard);
       setLoading(false);
     }
   };
