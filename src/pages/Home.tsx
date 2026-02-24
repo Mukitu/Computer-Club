@@ -20,103 +20,122 @@ const StatCard = ({ icon: Icon, label, value, color }: any) => (
 );
 
 export default function Home() {
-  const [stats, setStats] = useState({ members: 0, events: 0, posts: 0 });
-  const [isConfigured, setIsConfigured] = useState(true);
+  const [statistics, setStatistics] = useState({ members: 0, events: 12, announcements: 0 });
+  const [isDatabaseReady, setIsDatabaseReady] = useState(true);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
-      setIsConfigured(false);
+      setIsDatabaseReady(false);
       return;
     }
 
-    const fetchStats = async () => {
+    const loadDashboardData = async () => {
       try {
-        const { count: members } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-        const { count: posts } = await supabase.from('posts').select('*', { count: 'exact', head: true });
-        setStats({ members: members || 0, events: 12, posts: posts || 0 });
-      } catch (e) {
-        console.error("Failed to fetch stats:", e);
+        const { count: memberCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+          
+        const { count: postCount } = await supabase
+          .from('posts')
+          .select('*', { count: 'exact', head: true });
+
+        setStatistics(prev => ({
+          ...prev,
+          members: memberCount || 0,
+          announcements: postCount || 0
+        }));
+      } catch (err) {
+        console.error("Dashboard data sync failed:", err);
       }
     };
-    fetchStats();
+    
+    loadDashboardData();
   }, []);
 
   return (
-    <div className="space-y-24 pb-24">
-      {!isConfigured && (
-        <div className="bg-amber-50 border-b border-amber-100 p-4 flex items-center justify-center gap-3 text-amber-800 font-medium">
-          <AlertTriangle size={20} />
-          <span>Supabase keys missing. Please add VITE_SUPABASE_ANON_KEY to Secrets.</span>
+    <div className="flex flex-col gap-24 pb-32">
+      {!isDatabaseReady && (
+        <div className="bg-rose-50 border-b border-rose-100 p-4 flex items-center justify-center gap-3 text-rose-800 text-sm font-semibold">
+          <AlertTriangle size={18} />
+          <span>System configuration incomplete. Please verify environment secrets.</span>
         </div>
       )}
-      {/* Hero Section */}
-      <section className="relative min-h-[80vh] flex items-center px-6 overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/10 rounded-full blur-[120px]" />
-          <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/10 rounded-full blur-[100px]" />
+
+      {/* Hero Experience */}
+      <section className="relative min-h-[85vh] flex items-center px-6 overflow-hidden pt-12">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-[-15%] right-[-5%] w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[120px]" />
+          <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[100px]" />
         </div>
 
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent text-sm font-bold mb-6">
-              <TrendingUp size={16} />
-              <span>Innovating the Future</span>
+            <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-primary/5 text-primary text-xs font-black uppercase tracking-widest mb-8 border border-primary/10">
+              <TrendingUp size={14} />
+              <span>Pioneering Digital Excellence</span>
             </div>
-            <h1 className="text-6xl lg:text-7xl font-display font-bold text-primary leading-[1.1] mb-8">
-              NBIU Computer <br />
-              <span className="text-accent">Society Club</span>
-            </h1>
-            <p className="text-xl text-slate-600 leading-relaxed mb-10 max-w-lg">
-              The premier hub for technology enthusiasts at North Bengal International University. 
-              Join us to build, learn, and lead in the digital era.
+            
+            <p className="text-2xl md:text-3xl text-slate-500 font-display font-light leading-relaxed mb-12 max-w-xl">
+              Empowering the next generation of engineers at <span className="text-primary font-bold">North Bengal International University</span> through collaboration, innovation, and technical mastery.
             </p>
-            <div className="flex flex-wrap gap-4">
-              <Link to="/auth" className="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-slate-800 transition-all shadow-xl shadow-primary/20 flex items-center gap-2">
-                Join Community <ArrowRight size={20} />
+
+            <div className="flex flex-wrap gap-5">
+              <Link 
+                to="/auth" 
+                className="group bg-primary text-white px-10 py-4.5 rounded-2xl font-bold text-lg hover:bg-slate-800 transition-all shadow-2xl shadow-primary/25 flex items-center gap-3"
+              >
+                Join the Society
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link to="/feed" className="bg-white text-primary border border-slate-200 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all">
-                View Feed
+              <Link 
+                to="/feed" 
+                className="bg-white text-slate-900 border border-slate-200 px-10 py-4.5 rounded-2xl font-bold text-lg hover:border-primary hover:text-primary transition-all"
+              >
+                Explore Feed
               </Link>
             </div>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.2 }}
             className="relative"
           >
-            <div className="relative z-10 rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-white">
+            <div className="relative z-10 rounded-[3rem] overflow-hidden shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border-[12px] border-white">
               <img 
-                src="https://picsum.photos/seed/tech/800/600" 
-                alt="Tech Community" 
-                className="w-full h-full object-cover"
+                src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&q=80&w=1200" 
+                alt="Modern Workspace" 
+                className="w-full aspect-[4/3] object-cover hover:scale-105 transition-transform duration-700"
                 referrerPolicy="no-referrer"
               />
             </div>
-            <div className="absolute -bottom-10 -left-10 glass p-6 rounded-3xl z-20 max-w-xs">
-              <div className="flex items-center gap-4 mb-3">
-                <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white">
-                  <CheckCircle2 size={20} />
+            
+            <div className="absolute -bottom-8 -left-8 bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] z-20 max-w-xs shadow-2xl border border-white/50">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                  <CheckCircle2 size={24} />
                 </div>
-                <p className="font-bold text-slate-800">Active Community</p>
+                <h4 className="font-black text-slate-900 tracking-tight">Vibrant Ecosystem</h4>
               </div>
-              <p className="text-sm text-slate-500">Weekly workshops, hackathons, and networking events for all members.</p>
+              <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                Engage in high-impact workshops, hackathons, and collaborative research initiatives.
+              </p>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <StatCard icon={Users} label="Total Members" value={stats.members} color="bg-blue-600" />
-          <StatCard icon={Calendar} label="Events Hosted" value={stats.events} color="bg-indigo-600" />
-          <StatCard icon={Megaphone} label="Announcements" value={stats.posts} color="bg-violet-600" />
+      {/* Key Metrics */}
+      <section className="max-w-7xl mx-auto px-6 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          <StatCard icon={Users} label="Active Members" value={statistics.members} color="bg-blue-600" />
+          <StatCard icon={Calendar} label="Events Planned" value={statistics.events} color="bg-indigo-600" />
+          <StatCard icon={Megaphone} label="Latest Updates" value={statistics.announcements} color="bg-emerald-600" />
         </div>
       </section>
 

@@ -12,81 +12,93 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<any | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    // Safety timeout: Never let the app stay in loading state for more than 3 seconds
-    const timeout = setTimeout(() => {
-      if (loading) {
-        console.warn("Auth loading timed out - forcing app start");
-        setLoading(false);
+    // Failsafe mechanism to prevent infinite loading states
+    const initializationGuard = setTimeout(() => {
+      if (isInitializing) {
+        console.warn("Authentication handshake timed out - proceeding with default state");
+        setIsInitializing(false);
       }
-    }, 3000);
+    }, 3500);
 
-    const fetchSession = async () => {
+    const synchronizeAuthenticationState = async () => {
       if (!isSupabaseConfigured()) {
-        setLoading(false);
+        setIsInitializing(false);
         return;
       }
 
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
+        setCurrentUser(session?.user ?? null);
+        
         if (session?.user) {
-          const { data, error } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
           
-          if (!error) setProfile(data);
+          if (!profileError) setUserProfile(profileData);
         }
-      } catch (e) {
-        console.error("Auth init error:", e);
+      } catch (err) {
+        console.error("Critical authentication failure:", err);
       } finally {
-        setLoading(false);
-        clearTimeout(timeout);
+        setIsInitializing(false);
+        clearTimeout(initializationGuard);
       }
     };
 
-    fetchSession();
+    synchronizeAuthenticationState();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isSupabaseConfigured()) return;
       
       try {
-        setUser(session?.user ?? null);
+        setCurrentUser(session?.user ?? null);
         if (session?.user) {
-          const { data, error } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
-          if (!error) setProfile(data);
+          if (!profileError) setUserProfile(profileData);
         } else {
-          setProfile(null);
+          setUserProfile(null);
         }
-      } catch (e) {
-        console.error("Auth state change error:", e);
+      } catch (err) {
+        console.error("Authentication state transition error:", err);
       } finally {
-        setLoading(false);
+        setIsInitializing(false);
       }
     });
 
     return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
+      authSubscription.unsubscribe();
+      clearTimeout(initializationGuard);
     };
   }, []);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const terminateSession = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Logout operation failed:", err);
+    }
+  };
+
+  const contextValue: AuthContextType = {
+    user: currentUser,
+    profile: userProfile,
+    loading: isInitializing,
+    signOut: terminateSession
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

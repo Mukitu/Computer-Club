@@ -5,85 +5,84 @@ import { Menu, X, User, LogOut, LayoutDashboard, Bell } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const Navbar: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [hasScrolled, setHasScrolled] = useState(false);
+  const currentPath = useLocation().pathname;
   const { user, profile, signOut } = useAuth();
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const monitorScroll = () => setHasScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', monitorScroll);
+    return () => window.removeEventListener('scroll', monitorScroll);
   }, []);
 
-  const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Feed', path: '/feed' },
-    { name: 'Leadership', path: '/leadership' },
-    { name: 'Members', path: '/members' },
-    { name: 'Payments', path: '/payments' },
+  const navigationItems = [
+    { label: 'Home', href: '/' },
+    { label: 'Feed', href: '/feed' },
+    { label: 'Leadership', href: '/leadership' },
+    { label: 'Members', href: '/members' },
+    { label: 'Payments', href: '/payments' },
   ];
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      scrolled ? 'bg-white/80 backdrop-blur-lg shadow-lg py-3' : 'bg-transparent py-5'
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      hasScrolled ? 'bg-white/90 backdrop-blur-xl shadow-sm py-3' : 'bg-transparent py-6'
     }`}>
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
         <Link to="/" className="flex items-center gap-4 group">
           <div className="relative">
-            <div className="absolute -inset-1 bg-gradient-to-tr from-accent to-blue-400 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-500"></div>
-            <div className="relative w-11 h-11 bg-primary rounded-xl flex items-center justify-center text-white shadow-xl group-hover:scale-105 transition-transform duration-500 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+            <div className="absolute -inset-1.5 bg-gradient-to-tr from-primary to-accent rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+            <div className="relative w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-2xl group-hover:scale-105 transition-transform duration-500 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"></div>
               <span className="relative font-display font-black text-2xl tracking-tighter">C</span>
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="text-xl font-display font-black text-primary leading-none tracking-tight group-hover:text-accent transition-colors duration-300">
-              NBIU <span className="text-accent">CSC</span>
-            </span>
-            <span className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-black mt-1">
-              Computer Society
+            <span className="text-xl font-display font-black text-slate-900 leading-none tracking-tight group-hover:text-primary transition-colors duration-300">
+              NBIU <span className="text-primary">CSC</span>
             </span>
           </div>
         </Link>
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`text-sm font-semibold transition-colors ${
-                location.pathname === link.path ? 'text-accent' : 'text-slate-600 hover:text-primary'
-              }`}
-            >
-              {link.name}
-            </Link>
-          ))}
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-10">
+          <div className="flex items-center gap-8">
+            {navigationItems.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={`text-sm font-bold tracking-tight transition-all hover:text-primary ${
+                  currentPath === item.href ? 'text-primary' : 'text-slate-500'
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
           
           {user ? (
-            <div className="flex items-center gap-4 ml-4 pl-4 border-l border-slate-200">
+            <div className="flex items-center gap-6 ml-4 pl-8 border-l border-slate-200">
               {profile?.role === 'admin' && (
-                <Link to="/admin" className="p-2 rounded-full bg-slate-100 text-slate-600 hover:bg-accent hover:text-white transition-all">
-                  <LayoutDashboard size={20} />
+                <Link to="/admin" className="p-2.5 rounded-full bg-slate-50 text-slate-500 hover:bg-primary hover:text-white transition-all shadow-sm">
+                  <LayoutDashboard size={18} />
                 </Link>
               )}
               <div className="relative group">
-                <button className="flex items-center gap-2 p-1 pr-3 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
+                <button className="flex items-center gap-3 p-1.5 pr-4 rounded-full bg-slate-50 hover:bg-slate-100 transition-all border border-slate-100">
+                  <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-black shadow-lg">
                     {profile?.full_name?.charAt(0) || 'U'}
                   </div>
-                  <span className="text-xs font-bold text-slate-700">{profile?.full_name?.split(' ')[0]}</span>
+                  <span className="text-xs font-black text-slate-700 tracking-tight">{profile?.full_name?.split(' ')[0]}</span>
                 </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right scale-95 group-hover:scale-100 p-2">
-                  <Link to="/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
-                    <User size={16} /> Profile
+                <div className="absolute right-0 mt-3 w-56 bg-white rounded-[1.5rem] shadow-2xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right scale-95 group-hover:scale-100 p-2.5 z-50">
+                  <Link to="/profile" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
+                    <User size={16} /> My Profile
                   </Link>
                   <button 
                     onClick={() => signOut()}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
                   >
-                    <LogOut size={16} /> Sign Out
+                    <LogOut size={16} /> Terminate Session
                   </button>
                 </div>
               </div>
@@ -91,54 +90,53 @@ export const Navbar: React.FC = () => {
           ) : (
             <Link 
               to="/auth" 
-              className="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-primary/20"
+              className="bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-black hover:bg-primary transition-all shadow-xl shadow-slate-900/20"
             >
-              Join Club
+              Join the Society
             </Link>
           )}
         </div>
 
-        {/* Mobile Toggle */}
-        <button className="md:hidden p-2 text-primary" onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X /> : <Menu />}
+        {/* Mobile Interaction */}
+        <button className="md:hidden p-2 text-slate-900" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
-      {/* Mobile Nav */}
+      {/* Mobile Navigation Overlay */}
       <AnimatePresence>
-        {isOpen && (
+        {isMobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-white border-t border-slate-100 overflow-hidden"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="md:hidden bg-white border-t border-slate-100 shadow-2xl"
           >
-            <div className="p-6 flex flex-col gap-4">
-              {navLinks.map((link) => (
+            <div className="p-8 flex flex-col gap-6">
+              {navigationItems.map((item) => (
                 <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setIsOpen(false)}
-                  className={`text-lg font-bold ${
-                    location.pathname === link.path ? 'text-accent' : 'text-slate-600'
+                  key={item.href}
+                  to={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`text-xl font-black tracking-tight ${
+                    currentPath === item.href ? 'text-primary' : 'text-slate-900'
                   }`}
                 >
-                  {link.name}
+                  {item.label}
                 </Link>
               ))}
-              {!user && (
+              {!user ? (
                 <Link 
                   to="/auth" 
-                  onClick={() => setIsOpen(false)}
-                  className="bg-primary text-white px-6 py-3 rounded-xl text-center font-bold"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="bg-slate-900 text-white px-6 py-4 rounded-2xl text-center font-black shadow-xl shadow-slate-900/20"
                 >
                   Join Club
                 </Link>
-              )}
-              {user && (
+              ) : (
                 <button 
-                  onClick={() => { signOut(); setIsOpen(false); }}
-                  className="text-red-600 font-bold text-left py-2"
+                  onClick={() => { signOut(); setIsMobileMenuOpen(false); }}
+                  className="text-rose-600 font-black text-left py-2 text-xl"
                 >
                   Sign Out
                 </button>
